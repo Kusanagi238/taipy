@@ -180,6 +180,10 @@ class ExcelDataNode(DataNode, _FileDataNodeMixin, _TabularDataNodeMixin):
             if not isinstance(user_provided_sheet_names, (list, set, tuple)):
                 user_provided_sheet_names = [user_provided_sheet_names]
 
+            # Ensure the user_provided_sheet_names is indexable (convert set to list)
+            if isinstance(user_provided_sheet_names, set):
+                user_provided_sheet_names = list(user_provided_sheet_names)
+
             provided_sheet_names = user_provided_sheet_names or sheet_names
 
             for sheet_name in provided_sheet_names:
