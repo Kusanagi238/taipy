@@ -146,6 +146,19 @@ class _SequenceManager(_Manager[Sequence], _VersionMixin):
             elif _task := task_manager._get(task):
                 _tasks.append(_task)
             else:
+                # Attempt best-effort resolutions for common TaskId representations before failing
+                try:
+                    # If task has an 'id' attribute (TaskId-like object), try that
+                    candidate = task.id if hasattr(task, "id") else str(task)
+                    # If candidate contains a version delimiter like ':' try the id part
+                    if isinstance(candidate, str) and ":" in candidate:
+                        candidate = candidate.split(":")[0]
+                    if candidate and (resolved := task_manager._get(candidate)):
+                        _tasks.append(resolved)
+                        continue
+                except Exception:
+                    # ignore resolution errors and raise below
+                    pass
                 raise NonExistingTask(task)
         return _tasks
 

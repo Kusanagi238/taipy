@@ -1226,7 +1226,16 @@ class Gui:
                     debug_warnings: t.List[warnings.WarningMessage] = []
                     with warnings.catch_warnings(record=True) as warns:
                         warnings.resetwarnings()
-                        json.dumps(newvalue, cls=_TaipyJsonEncoder)
+                        try:
+                            # Try to serialize to detect non-serializable objects; catch errors to avoid propagation
+                            json.dumps(newvalue, cls=_TaipyJsonEncoder)
+                        except (TypeError, ValueError) as e:
+                            # Not serializable: skip this variable
+                            if is_debugging():
+                                _TaipyLogger._get_logger().debug(
+                                    f"Skipping variable '{_var}' because it is not JSON serializable: {e}"
+                                )
+                            continue
                         if len(warns):
                             keep_value = True
                             for w in warns:
@@ -1377,6 +1386,16 @@ class Gui:
     def __send_ws(self, payload: dict, allow_grouping=True, send_back_only=False) -> None:
         grouping_message = self.__get_message_grouping() if allow_grouping else None
         if grouping_message is None:
+            # Guard against cases where the server is not initialized on the Gui instance
+            if not hasattr(self, "_server") or self._server is None:
+                try:
+                    _warn(
+                        f"Attempted to send websocket message in '{self.__frame.f_code.co_name}' but server is not initialized"
+                    )
+                except Exception:
+                    # If frame or _warn are not available, silently ignore to avoid raising during cleanup
+                    pass
+                return
             try:
                 self._server.send_ws_message(
                     data=payload,

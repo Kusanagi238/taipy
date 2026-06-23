@@ -12,7 +12,18 @@
 from apispec import APISpec
 from apispec.exceptions import APISpecError
 from apispec.ext.marshmallow import MarshmallowPlugin
-from apispec_webframeworks.flask import FlaskPlugin
+
+try:
+    from apispec_webframeworks.flask import FlaskPlugin
+except Exception:
+
+    def FlaskPlugin(*args, **kwargs):
+        raise ImportError(
+            "FlaskPlugin could not be imported from apispec_webframeworks.flask. "
+            "This usually means an optional dependency (e.g. 'pkg_resources' / 'setuptools') is missing."
+        )
+
+
 from flask import Blueprint, jsonify, render_template
 
 
