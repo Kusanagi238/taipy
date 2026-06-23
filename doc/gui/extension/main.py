@@ -14,7 +14,17 @@ import string
 
 from example_library import ExampleLibrary
 
-from taipy.gui import Gui
+
+# Defer importing taipy.gui until runtime to avoid import-time dependency
+# resolution (which can break pytest collection or script execution).
+# Provide a lightweight callable that will import the real Gui when used.
+def _lazy_Gui(*args, **kwargs):
+    from taipy.gui import Gui as _Gui
+
+    return _Gui(*args, **kwargs)
+
+
+Gui = _lazy_Gui
 
 
 def on_action(state, id):

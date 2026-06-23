@@ -12,9 +12,15 @@
 import taipy as tp
 from taipy import Gui, Orchestrator
 
-from .config.config import configure
-from .pages import job_page, scenario_page
-from .pages.root import content, root, selected_data_node, selected_scenario
+try:
+    from .config.config import configure
+    from .pages import job_page, scenario_page
+    from .pages.root import content, root, selected_data_node, selected_scenario
+except (ImportError, ValueError):
+    # Fallback to absolute imports when the module is executed as a script
+    from config.config import configure
+    from pages import job_page, scenario_page
+    from pages.root import content, root, selected_data_node, selected_scenario
 
 
 def on_init(state): ...

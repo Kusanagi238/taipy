@@ -13,8 +13,6 @@ import os
 
 from cookiecutter.main import cookiecutter
 
-from .utils import _run_template
-
 
 def test_scenario_management_with_toml_config(tmpdir):
     cookiecutter(
@@ -40,12 +38,62 @@ def test_scenario_management_with_toml_config(tmpdir):
     with open(os.path.join(tmpdir, "foo_app", "config", "config.py")) as config_file:
         assert 'Config.load("config/config.toml")' in config_file.read()
 
+    # Try to run the generated application in a way that surfaces import errors and
+    # attempts to run it as a module (python -m <package>.main) first, then as a
+    # script if needed. Capture stdout/stderr and include them in assertion
+    # diagnostics to help CI debugging when imports fail.
+    import subprocess
+    import sys
+
     taipy_path = os.getcwd()
-    stdout = _run_template(taipy_path, os.path.join(tmpdir, "foo_app"), "main.py")
+    app_dir = os.path.join(tmpdir, "foo_app")
+    module_name = os.path.basename(app_dir)
+
+    stdout = ""
+    # First attempt: run as module so relative imports inside the package succeed
+    try:
+        res = subprocess.run(
+            [sys.executable, "-m", f"{module_name}.main"],
+            cwd=taipy_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        stdout = (res.stdout or "") + (res.stderr or "")
+    except subprocess.TimeoutExpired as e:
+        # Capture partial output if any
+        stdout = (e.stdout or "") + (e.stderr or "")
+    except Exception:
+        stdout = ""
+
+    # If running as a module failed (non-zero exit) or produced no output,
+    # try running the script directly from the app folder to collect error details.
+    if (
+        not stdout
+        or ("Traceback (most recent call last)" in stdout and "ImportError" in stdout)
+        or ("ModuleNotFoundError" in stdout)
+    ):
+        try:
+            res2 = subprocess.run(
+                [sys.executable, "main.py"],
+                cwd=app_dir,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            stdout = (res2.stdout or "") + (res2.stderr or "")
+        except subprocess.TimeoutExpired as e:
+            stdout = (e.stdout or "") + (e.stderr or "")
+        except Exception:
+            stdout = stdout or ""
 
     # Assert the message when the application is run successfully is in the stdout
-    assert "[Taipy][INFO] Configuration 'config/config.toml' successfully loaded." in stdout
-    assert "[Taipy][INFO]  * Server starting on" in stdout
+    assert (
+        "[Taipy][INFO] Configuration 'config/config.toml' successfully loaded." in stdout
+    ), f"Expected Taipy configuration load message in stdout. Output:\n{stdout}"
+    assert (
+        "[Taipy][INFO]  * Server starting on" in stdout
+    ), f"Expected Taipy server starting message in stdout. Output:\n{stdout}"
 
 
 def test_scenario_management_without_toml_config(tmpdir):
@@ -72,11 +120,55 @@ def test_scenario_management_without_toml_config(tmpdir):
         assert 'Config.load("config/config.toml")' not in config_content
         assert all(x in config_content for x in ["Config.configure_csv_data_node", "Config.configure_task"])
 
+    # Try to run the generated application in a way that surfaces import errors and
+    # attempts to run it as a module (python -m <package>.main) first, then as a
+    # script if needed. Capture stdout/stderr and include them in assertion
+    # diagnostics to help CI debugging when imports fail.
+    import subprocess
+    import sys
+
     taipy_path = os.getcwd()
-    stdout = _run_template(taipy_path, os.path.join(tmpdir, "foo_app"), "main.py")
+    app_dir = os.path.join(tmpdir, "foo_app")
+    module_name = os.path.basename(app_dir)
+
+    stdout = ""
+    try:
+        res = subprocess.run(
+            [sys.executable, "-m", f"{module_name}.main"],
+            cwd=taipy_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        stdout = (res.stdout or "") + (res.stderr or "")
+    except subprocess.TimeoutExpired as e:
+        stdout = (e.stdout or "") + (e.stderr or "")
+    except Exception:
+        stdout = ""
+
+    if (
+        not stdout
+        or ("Traceback (most recent call last)" in stdout and "ImportError" in stdout)
+        or ("ModuleNotFoundError" in stdout)
+    ):
+        try:
+            res2 = subprocess.run(
+                [sys.executable, "main.py"],
+                cwd=app_dir,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            stdout = (res2.stdout or "") + (res2.stderr or "")
+        except subprocess.TimeoutExpired as e:
+            stdout = (e.stdout or "") + (e.stderr or "")
+        except Exception:
+            stdout = stdout or ""
 
     # Assert the message when the application is run successfully is in the stdout
-    assert "[Taipy][INFO]  * Server starting on" in stdout
+    assert (
+        "[Taipy][INFO]  * Server starting on" in stdout
+    ), f"Expected Taipy server starting message in stdout. Output:\n{stdout}"
 
 
 def test_with_git(tmpdir):

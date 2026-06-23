@@ -12,18 +12,18 @@
 import os
 from typing import Dict
 
-from ..logger._taipy_logger import _TaipyLogger
-from ._config import _Config
-from ._config_comparator._config_comparator import _ConfigComparator
-from ._serializer._json_serializer import _JsonSerializer
-from ._serializer._toml_serializer import _TomlSerializer
-from .checker._checker import _Checker
-from .checker.issue_collector import IssueCollector
-from .common._classproperty import _Classproperty
-from .common._config_blocker import _ConfigBlocker
-from .global_app.global_app_config import GlobalAppConfig
-from .section import Section
-from .unique_section import UniqueSection
+from taipy.common.config._config import _Config
+from taipy.common.config._config_comparator._config_comparator import _ConfigComparator
+from taipy.common.config._serializer._json_serializer import _JsonSerializer
+from taipy.common.config._serializer._toml_serializer import _TomlSerializer
+from taipy.common.config.checker._checker import _Checker
+from taipy.common.config.checker.issue_collector import IssueCollector
+from taipy.common.config.common._classproperty import _Classproperty
+from taipy.common.config.common._config_blocker import _ConfigBlocker
+from taipy.common.config.global_app.global_app_config import GlobalAppConfig
+from taipy.common.config.section import Section
+from taipy.common.config.unique_section import UniqueSection
+from taipy.logger._taipy_logger import _TaipyLogger
 
 
 class Config:

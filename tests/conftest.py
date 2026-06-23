@@ -10,20 +10,61 @@
 # specific language governing permissions and limitations under the License.
 
 import argparse
+
+# Lazily import taipy modules to avoid importing third-party dependencies
+# at pytest collection time which can cause ModuleNotFoundError for optional
+# packages (e.g. pkg_resources). The LazyObject will import the real object
+# on first use during test execution.
+import importlib
 import typing as t
 
 import pytest
 
-from taipy.common._cli._base_cli._taipy_parser import _TaipyParser
-from taipy.common.config import Config, _inject_section
-from taipy.common.config._config import _Config
-from taipy.common.config._config_comparator._config_comparator import _ConfigComparator
-from taipy.common.config._serializer._base_serializer import _BaseSerializer
-from taipy.common.config._serializer._toml_serializer import _TomlSerializer
-from taipy.common.config.checker._checker import _Checker
-from taipy.common.config.checker.issue_collector import IssueCollector
-from taipy.core.config import CoreSection, DataNodeConfig, JobConfig, ScenarioConfig, TaskConfig
-from taipy.rest.config import RestConfig
+
+class _LazyObject:
+    def __init__(self, module: str, attr: str):
+        self._module = module
+        self._attr = attr
+        self._obj = None
+
+    def _load(self):
+        if self._obj is None:
+            mod = importlib.import_module(self._module)
+            self._obj = getattr(mod, self._attr)
+
+    def __call__(self, *args, **kwargs):
+        self._load()
+        return self._obj(*args, **kwargs)
+
+    def __getattr__(self, name):
+        self._load()
+        return getattr(self._obj, name)
+
+    def __repr__(self):
+        if self._obj is None:
+            return f"<LazyObject {self._module}.{self._attr}>"
+        return repr(self._obj)
+
+
+def _lazy(module: str, attr: str):
+    return _LazyObject(module, attr)
+
+
+_TaipyParser = _lazy("taipy.common._cli._base_cli._taipy_parser", "_TaipyParser")
+Config = _lazy("taipy.common.config", "Config")
+_inject_section = _lazy("taipy.common.config", "_inject_section")
+_Config = _lazy("taipy.common.config._config", "_Config")
+_ConfigComparator = _lazy("taipy.common.config._config_comparator._config_comparator", "_ConfigComparator")
+_BaseSerializer = _lazy("taipy.common.config._serializer._base_serializer", "_BaseSerializer")
+_TomlSerializer = _lazy("taipy.common.config._serializer._toml_serializer", "_TomlSerializer")
+_Checker = _lazy("taipy.common.config.checker._checker", "_Checker")
+IssueCollector = _lazy("taipy.common.config.checker.issue_collector", "IssueCollector")
+CoreSection = _lazy("taipy.core.config", "CoreSection")
+DataNodeConfig = _lazy("taipy.core.config", "DataNodeConfig")
+JobConfig = _lazy("taipy.core.config", "JobConfig")
+ScenarioConfig = _lazy("taipy.core.config", "ScenarioConfig")
+TaskConfig = _lazy("taipy.core.config", "TaskConfig")
+RestConfig = _lazy("taipy.rest.config", "RestConfig")
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -161,6 +202,7 @@ def inject_core_sections() -> t.Callable:
         )
 
     return _inject_core_sections
+
 
 @pytest.fixture
 def inject_rest_sections() -> t.Callable:
