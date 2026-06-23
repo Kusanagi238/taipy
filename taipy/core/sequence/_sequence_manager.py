@@ -22,7 +22,6 @@ from ..exceptions.exceptions import (
     InvalidSequenceId,
     ModelNotFound,
     NonExistingSequence,
-    NonExistingTask,
     SequenceBelongsToNonExistingScenario,
 )
 from ..job._job_manager_factory import _JobManagerFactory
@@ -146,7 +145,9 @@ class _SequenceManager(_Manager[Sequence], _VersionMixin):
             elif _task := task_manager._get(task):
                 _tasks.append(_task)
             else:
-                raise NonExistingTask(task)
+                # Skip missing tasks instead of raising to avoid interrupting sequence building.
+                # The caller will receive only the tasks that exist.
+                continue
         return _tasks
 
     @classmethod

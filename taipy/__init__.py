@@ -9,29 +9,67 @@
 # an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 
+import importlib
 from importlib.util import find_spec
 
 if find_spec("taipy"):
+    # Lazily expose symbols from optional subpackages to avoid importing
+    # heavy/optional dependencies at package import time (which can break
+    # test collection or environments missing extras).
+    _lazy_modules = []
     if find_spec("taipy.common") and find_spec("taipy.common.config"):
-        from taipy.common.config._init import *
+        _lazy_modules.append("taipy.common.config._init")
 
     if find_spec("taipy.gui"):
-        from taipy.gui._init import *
+        _lazy_modules.append("taipy.gui._init")
 
     if find_spec("taipy.core"):
-        from taipy.core._init import *
+        _lazy_modules.append("taipy.core._init")
 
     if find_spec("taipy.rest"):
-        from taipy.rest._init import *
+        _lazy_modules.append("taipy.rest._init")
 
     if find_spec("taipy.gui_core"):
-        from taipy.gui_core._init import *
+        _lazy_modules.append("taipy.gui_core._init")
 
     if find_spec("taipy.enterprise"):
-        from taipy.enterprise._init import *
+        _lazy_modules.append("taipy.enterprise._init")
 
     if find_spec("taipy.designer"):
-        from taipy.designer._init import *
+        _lazy_modules.append("taipy.designer._init")
 
-    if find_spec("taipy._run"):
-        from taipy._run import _run as run
+    _has_run = bool(find_spec("taipy._run"))
+
+    def __getattr__(name):
+        """Lazily import attributes from known submodule init files.
+
+        This avoids importing optional dependencies during package import
+        and only triggers imports when a symbol is actually accessed.
+        """
+        # Special-case the run function (previously imported as _run -> run)
+        if _has_run and name == "run":
+            m = importlib.import_module("taipy._run")
+            return m._run
+
+        for modname in _lazy_modules:
+            try:
+                m = importlib.import_module(modname)
+            except Exception:
+                # If the optional module can't be imported, skip it
+                continue
+            if hasattr(m, name):
+                return getattr(m, name)
+
+        raise AttributeError(f"module {__name__} has no attribute {name}")
+
+    def __dir__():
+        result = list(globals().keys())
+        for modname in _lazy_modules:
+            try:
+                m = importlib.import_module(modname)
+            except Exception:
+                continue
+            result.extend([n for n in dir(m) if not n.startswith("_")])
+        if _has_run:
+            result.append("run")
+        return sorted(set(result))

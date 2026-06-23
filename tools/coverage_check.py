@@ -48,12 +48,26 @@ def check_changed_files_coverage(coverage_file, changed_files, threshold=80):
     qty = 0
     sum_coverage = 0
     for file in changed_files:
-        if file in files:
-            coverage = files[file]
-            print(f"Coverage for {file}: {coverage:.2f}%")  # noqa: T201
-            sum_coverage += coverage
-            qty += 1
+        # Try several filename variants to match keys parsed from coverage.xml.
+        # Coverage filenames can include or omit the leading `taipy/` prefix, so
+        # test both forms before reporting missing coverage.
+        candidates = [file]
+        if file.startswith("taipy/"):
+            candidates.append(file.replace("taipy/", ""))
         else:
+            candidates.append(f"taipy/{file}")
+
+        found = False
+        for candidate in candidates:
+            if candidate in files:
+                coverage = files[candidate]
+                print(f"Coverage for {file}: {coverage:.2f}%")  # noqa: T201
+                sum_coverage += coverage
+                qty += 1
+                found = True
+                break
+
+        if not found:
             print(f"No coverage data found for {file}")  # noqa: T201
 
     if qty:
@@ -74,10 +88,13 @@ def get_changed_files(base_branch):
             text=True,
             check=True,
         )
+        # Preserve the file paths returned by git. Do not unconditionally strip
+        # the 'taipy/' prefix here because coverage.xml may reference files
+        # with that prefix. Only filter out test/tools files.
         changed_files = [
-            file.replace("taipy/", "")
+            file
             for file in result.stdout.strip().splitlines()
-            if not file.startswith(("tests/", "tools/"))
+            if file and not file.startswith(("tests/", "tools/"))
         ]
         return changed_files
     except subprocess.CalledProcessError as e:

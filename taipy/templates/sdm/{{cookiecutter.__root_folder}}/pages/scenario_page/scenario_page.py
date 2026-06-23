@@ -28,16 +28,19 @@ def manage_data_node_partial(state):
     manage_partial(state)
 
 
-with tgb.Page() as scenario_page:
-    with tgb.layout(columns="1, 1"):
-        with tgb.part(render="{selected_scenario}"):
-            tgb.scenario(
-                "{selected_scenario}",
-                expandable=False,
-                expanded=True,
-                on_submission_change=notify_on_submission,
-            )
+def create_scenario_page():
+    with tgb.Page() as scenario_page:
+        with tgb.layout(columns="1, 1"):
+            with tgb.part(render="{selected_scenario}"):
+                tgb.scenario(
+                    "{selected_scenario}",
+                    expandable=False,
+                    expanded=True,
+                    on_submission_change=notify_on_submission,
+                )
 
-            tgb.scenario_dag("{selected_scenario}")
+                tgb.scenario_dag("{selected_scenario}")
 
-        tgb.part(partial="{data_node_partial}", render="{selected_data_node}")
+            tgb.part(partial="{data_node_partial}", render="{selected_data_node}")
+
+    return scenario_page

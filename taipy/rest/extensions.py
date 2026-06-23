@@ -15,6 +15,29 @@ All extensions here are used as singletons and
 initialized in application factory
 """
 
-from .commons.apispec import APISpecExt
+def _create_apispec():
+    # Import only when actually creating the instance to avoid module-level side effects
+    from .commons.apispec import APISpecExt
+    return APISpecExt()
 
-apispec = APISpecExt()
+
+class _LazyAPISpec:
+    """Lazy proxy that defers creating the real APISpecExt until first use."""
+    def __init__(self):
+        self._instance = None
+
+    def _ensure(self):
+        if self._instance is None:
+            self._instance = _create_apispec()
+
+    def __getattr__(self, name):
+        self._ensure()
+        return getattr(self._instance, name)
+
+    def __repr__(self):
+        if self._instance is None:
+            return "<Lazy APISpecExt (not created)>"
+        return repr(self._instance)
+
+
+apispec = _LazyAPISpec()

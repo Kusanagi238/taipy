@@ -293,6 +293,9 @@ class Gui:
         if _server_class is None:
             raise ValueError("Invalid 'server' option")
         self._server_class = _server_class
+        # Backwards compatibility: some code paths expect attribute named '_server'
+        # Ensure we provide the same reference as '_server_instance'.
+        self._server = self._server_instance
 
         self._config = _Config(self)
         self.__content_accessor = None

@@ -428,7 +428,7 @@ class Scenario(_Entity, Submittable, _Labeled):
         self,
         new_creation_date: Optional[datetime] = None,
         new_name: Optional[str] = None,
-        data_to_duplicate: Union[Set[str], bool] = True
+        data_to_duplicate: Union[Set[str], bool] = True,
     ) -> "Scenario":
         """Duplicate the scenario and return the new one.
 
@@ -615,7 +615,6 @@ class Scenario(_Entity, Submittable, _Labeled):
             self.sequences = _sequences  # type: ignore
             Notifier.publish(Event(EventEntityType.SEQUENCE, EventOperation.DELETION, entity_id=seq.id))
 
-
     def remove_sequences(self, sequence_names: List[str]) -> None:
         """Remove multiple sequences from the scenario.
 
@@ -725,7 +724,7 @@ class Scenario(_Entity, Submittable, _Labeled):
             data_nodes_dict.update(task.data_nodes)
         return data_nodes_dict
 
-    def __get_additional_data_nodes(self, raise_not_existing: bool=True) -> Dict[str, DataNode]:
+    def __get_additional_data_nodes(self, raise_not_existing: bool = True) -> Dict[str, DataNode]:
         from ..data._data_manager_factory import _DataManagerFactory
 
         additional_data_nodes = {}
@@ -755,27 +754,31 @@ class Scenario(_Entity, Submittable, _Labeled):
         task_manager = _TaskManagerFactory._build_manager()
         non_existing_tasks: List = []
         for task_or_id in self._tasks:
-            t = task_manager._get(task_or_id, task_or_id)
+            # Ask the manager to return None when the task does not exist
+            # to avoid getting back the raw id/string which would bypass the isinstance check.
+            t = task_manager._get(task_or_id, None)
 
             if not isinstance(t, Task):
-                if raise_not_existing:
-                    raise NonExistingTask(task_or_id)
+                # Collect missing tasks to allow cleanup of all stale ids before optionally raising
                 non_existing_tasks.append(task_or_id)
                 continue
             _tasks[t.config_id] = t
         for t_id in non_existing_tasks:
             self._tasks.discard(t_id)  # type: ignore[arg-type]
+        if raise_not_existing and len(non_existing_tasks) > 0:
+            # Keep backward compatibility by raising for the first missing task after cleanup
+            raise NonExistingTask(non_existing_tasks[0])
         return _tasks
 
     @staticmethod
     def __check_sequence_tasks_exist_in_scenario_tasks(
         sequence_name: str, sequence_task_ids: Set[TaskId], scenario_id: ScenarioId, scenario_task_ids: Set[TaskId]
     ):
-        non_existing_sequence_task_ids_in_scenario = set()
-        for sequence_task_id in sequence_task_ids:
-            if sequence_task_id not in scenario_task_ids:
-                non_existing_sequence_task_ids_in_scenario.add(sequence_task_id)
-        if len(non_existing_sequence_task_ids_in_scenario) > 0:
+        # Collect missing ids in a stable/list form so the exception message is deterministic
+        non_existing_sequence_task_ids_in_scenario = [
+            sequence_task_id for sequence_task_id in sequence_task_ids if sequence_task_id not in scenario_task_ids
+        ]
+        if non_existing_sequence_task_ids_in_scenario:
             raise SequenceTaskDoesNotExistInScenario(
                 list(non_existing_sequence_task_ids_in_scenario), sequence_name, scenario_id
             )
@@ -816,7 +819,17 @@ class Scenario(_Entity, Submittable, _Labeled):
         from taipy.core.sequence._sequence_manager_factory import _SequenceManagerFactory
 
         seq_manager = _SequenceManagerFactory._build_manager()
-        seq = seq_manager._create(name, tasks, subscribers or [], properties or {}, self.id, self.version)
+        try:
+            seq = seq_manager._create(name, tasks, subscribers or [], properties or {}, self.id, self.version)
+        except NonExistingTask as e:
+            # Map lower-level missing-task error into a sequence-specific exception
+            missing_id = None
+            if e.args:
+                missing_id = e.args[0]
+            # Raise a SequenceTaskDoesNotExistInScenario with the sequence name and scenario id for clearer context
+            raise SequenceTaskDoesNotExistInScenario(
+                [missing_id] if missing_id is not None else [], name, self.id
+            ) from e
 
         _sequences = _Reloader()._reload(self._MANAGER_NAME, self)._sequences
         _sequences.update(

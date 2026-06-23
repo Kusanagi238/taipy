@@ -16,7 +16,16 @@ from taipy.common._modules import EnterpriseEdition
 from taipy.common.logger._taipy_logger import _TaipyLogger
 from taipy.core.common._utils import _load_fct
 
-from ..extensions import apispec
+try:
+    # apispec is an optional extension; importing it at module import time can
+    # trigger heavy dependency resolution in some environments (e.g. apispec_webframeworks
+    # importing pkg_resources). Import lazily / tolerate failure to avoid
+    # breaking test collection or environments where the optional dependency
+    # is not installed.
+    from ..extensions import apispec
+except Exception:
+    apispec = None
+
 from .resources import (
     CycleList,
     CycleResource,
@@ -44,129 +53,130 @@ _logger = _TaipyLogger._get_logger()
 
 blueprint = Blueprint("api", __name__, url_prefix="/api/v1")
 
-api = Api(blueprint)
-
-api.add_resource(
-    DataNodeResource,
-    "/datanodes/<string:datanode_id>/",
-    endpoint="datanode_by_id",
-    resource_class_kwargs={"logger": _logger},
-)
-
-api.add_resource(
-    DataNodeReader,
-    "/datanodes/<string:datanode_id>/read/",
-    endpoint="datanode_reader",
-    resource_class_kwargs={"logger": _logger},
-)
-
-api.add_resource(
-    DataNodeWriter,
-    "/datanodes/<string:datanode_id>/write/",
-    endpoint="datanode_writer",
-    resource_class_kwargs={"logger": _logger},
-)
-
-api.add_resource(
-    DataNodeList,
-    "/datanodes/",
-    endpoint="datanodes",
-    resource_class_kwargs={"logger": _logger},
-)
-
-api.add_resource(
-    TaskResource,
-    "/tasks/<string:task_id>/",
-    endpoint="task_by_id",
-    resource_class_kwargs={"logger": _logger},
-)
-
-api.add_resource(TaskList, "/tasks/", endpoint="tasks", resource_class_kwargs={"logger": _logger})
-api.add_resource(
-    TaskExecutor,
-    "/tasks/submit/<string:task_id>/",
-    endpoint="task_submit",
-    resource_class_kwargs={"logger": _logger},
-)
-
-api.add_resource(
-    SequenceResource,
-    "/sequences/<string:sequence_id>/",
-    endpoint="sequence_by_id",
-    resource_class_kwargs={"logger": _logger},
-)
-api.add_resource(
-    SequenceList,
-    "/sequences/",
-    endpoint="sequences",
-    resource_class_kwargs={"logger": _logger},
-)
-api.add_resource(
-    SequenceExecutor,
-    "/sequences/submit/<string:sequence_id>/",
-    endpoint="sequence_submit",
-    resource_class_kwargs={"logger": _logger},
-)
-
-api.add_resource(
-    ScenarioResource,
-    "/scenarios/<string:scenario_id>/",
-    endpoint="scenario_by_id",
-    resource_class_kwargs={"logger": _logger},
-)
-api.add_resource(
-    ScenarioList,
-    "/scenarios/",
-    endpoint="scenarios",
-    resource_class_kwargs={"logger": _logger},
-)
-api.add_resource(
-    ScenarioExecutor,
-    "/scenarios/submit/<string:scenario_id>/",
-    endpoint="scenario_submit",
-    resource_class_kwargs={"logger": _logger},
-)
-
-api.add_resource(
-    CycleResource,
-    "/cycles/<string:cycle_id>/",
-    endpoint="cycle_by_id",
-    resource_class_kwargs={"logger": _logger},
-)
-api.add_resource(
-    CycleList,
-    "/cycles/",
-    endpoint="cycles",
-    resource_class_kwargs={"logger": _logger},
-)
-
-api.add_resource(
-    JobResource,
-    "/jobs/<string:job_id>/",
-    endpoint="job_by_id",
-    resource_class_kwargs={"logger": _logger},
-)
-api.add_resource(JobList, "/jobs/", endpoint="jobs", resource_class_kwargs={"logger": _logger})
-api.add_resource(
-    JobExecutor,
-    "/jobs/cancel/<string:job_id>/",
-    endpoint="job_cancel",
-    resource_class_kwargs={"logger": _logger},
-)
+# Defer creation of the Api instance and registration of resources until the
+# blueprint is actually registered on an application. Using blueprint.record
+# ensures these side-effects do not run at import time, avoiding failures when
+# optional runtime dependencies are missing during test collection.
 
 
-def load_enterprise_resources(api: Api):
-    """
-    Load enterprise resources.
-    """
+def _setup_api(state):
+    api = Api(blueprint)
 
-    if not EnterpriseEdition._is_installed():
-        return
-    load_resources = _load_fct("taipy.enterprise.rest.api.views", "_load_resources")
-    load_resources(api)
+    api.add_resource(
+        DataNodeResource,
+        "/datanodes/<string:datanode_id>/",
+        endpoint="datanode_by_id",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    api.add_resource(
+        DataNodeReader,
+        "/datanodes/<string:datanode_id>/read/",
+        endpoint="datanode_reader",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    api.add_resource(
+        DataNodeWriter,
+        "/datanodes/<string:datanode_id>/write/",
+        endpoint="datanode_writer",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    api.add_resource(
+        DataNodeList,
+        "/datanodes/",
+        endpoint="datanodes",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    api.add_resource(
+        TaskResource,
+        "/tasks/<string:task_id>/",
+        endpoint="task_by_id",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    api.add_resource(TaskList, "/tasks/", endpoint="tasks", resource_class_kwargs={"logger": _logger})
+    api.add_resource(
+        TaskExecutor,
+        "/tasks/submit/<string:task_id>/",
+        endpoint="task_submit",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    api.add_resource(
+        SequenceResource,
+        "/sequences/<string:sequence_id>/",
+        endpoint="sequence_by_id",
+        resource_class_kwargs={"logger": _logger},
+    )
+    api.add_resource(
+        SequenceList,
+        "/sequences/",
+        endpoint="sequences",
+        resource_class_kwargs={"logger": _logger},
+    )
+    api.add_resource(
+        SequenceExecutor,
+        "/sequences/submit/<string:sequence_id>/",
+        endpoint="sequence_submit",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    api.add_resource(
+        ScenarioResource,
+        "/scenarios/<string:scenario_id>/",
+        endpoint="scenario_by_id",
+        resource_class_kwargs={"logger": _logger},
+    )
+    api.add_resource(
+        ScenarioList,
+        "/scenarios/",
+        endpoint="scenarios",
+        resource_class_kwargs={"logger": _logger},
+    )
+    api.add_resource(
+        ScenarioExecutor,
+        "/scenarios/submit/<string:scenario_id>/",
+        endpoint="scenario_submit",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    api.add_resource(
+        CycleResource,
+        "/cycles/<string:cycle_id>/",
+        endpoint="cycle_by_id",
+        resource_class_kwargs={"logger": _logger},
+    )
+    api.add_resource(
+        CycleList,
+        "/cycles/",
+        endpoint="cycles",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    api.add_resource(
+        JobResource,
+        "/jobs/<string:job_id>/",
+        endpoint="job_by_id",
+        resource_class_kwargs={"logger": _logger},
+    )
+    api.add_resource(JobList, "/jobs/", endpoint="jobs", resource_class_kwargs={"logger": _logger})
+    api.add_resource(
+        JobExecutor,
+        "/jobs/cancel/<string:job_id>/",
+        endpoint="job_cancel",
+        resource_class_kwargs={"logger": _logger},
+    )
+
+    # Load enterprise-only resources once the Api is created
+    load_enterprise_resources(api)
 
 
-load_enterprise_resources(api)
+# Register the setup function to be called when the blueprint is registered
+# on an application. This defers all Api/resource creation to that moment.
+blueprint.record(_setup_api)
 
 
 def register_views():

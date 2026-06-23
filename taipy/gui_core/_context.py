@@ -101,12 +101,12 @@ class _GuiCoreContext(_CoreEventConsumerBase):
         # lazy_start
         self.__started = False
         # Gui event listener
-        gui._add_event_listener("authorization", self._auth_listener, with_state=True) # type: ignore
+        gui._add_event_listener("authorization", self._auth_listener, with_state=True)  # type: ignore
         # super
         super().__init__(reg_id, reg_queue)
 
     def on_user_init(self, state: State):
-        self.gui._fire_event("authorization", get_state_id(state), {}) # type: ignore
+        self.gui._fire_event("authorization", get_state_id(state), {})  # type: ignore
 
     def __lazy_start(self):
         if self.__started:
@@ -116,7 +116,7 @@ class _GuiCoreContext(_CoreEventConsumerBase):
 
     def process_event(self, event: Event):
         self.__lazy_start()
-        with self.gui._get_authorization(system=True): # type: ignore
+        with self.gui._get_authorization(system=True):  # type: ignore
             if event.entity_type is EventEntityType.SCENARIO:
                 self.scenario_refresh(
                     event.entity_id
@@ -151,7 +151,14 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                 )
 
     def broadcast_core_changed(self, payload: t.Dict[str, t.Any], client_id: t.Optional[str] = None):
-        self.gui._broadcast(_GuiCoreContext._CORE_CHANGED_NAME, payload, client_id) # type: ignore
+        try:
+            # Guard broadcast in case the GUI server isn't started or internals are missing
+            if hasattr(self.gui, "_broadcast"):
+                self.gui._broadcast(_GuiCoreContext._CORE_CHANGED_NAME, payload, client_id)  # type: ignore
+        except AttributeError:
+            # If the Gui instance doesn't have the underlying server attribute, ignore broadcasting
+            # to avoid raising during shutdown or before server start.
+            pass
 
     def scenario_refresh(self, scenario_id: t.Optional[str]):
         with self.lock:
@@ -193,7 +200,7 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                     last_client_status.submission_status = new_status
 
             if client_id := submission.properties.get("client_id"):
-                with self.gui._get_authorization(client_id): # type: ignore
+                with self.gui._get_authorization(client_id):  # type: ignore
                     if payload is not None:
                         running_tasks = {}
                         for job in submission.jobs:
@@ -337,8 +344,8 @@ class _GuiCoreContext(_CoreEventConsumerBase):
             match_case = fd.get("matchCase", False) is not False
             customs = CustomScenarioFilter._get_custom(col)
             if customs:
-                with self.gui._set_locals_context(customs[0] or None): # type: ignore
-                    fn = self.gui._get_user_function(customs[1]) # type: ignore
+                with self.gui._set_locals_context(customs[0] or None):  # type: ignore
+                    fn = self.gui._get_user_function(customs[1])  # type: ignore
                     if callable(fn):
                         col = fn
             if (
@@ -472,10 +479,10 @@ class _GuiCoreContext(_CoreEventConsumerBase):
             gui = state.get_gui()
             try:
                 on_creation = args[0] if isinstance(args[0], str) else None
-                on_creation_function = gui._get_user_function(on_creation) if on_creation else None # type: ignore
+                on_creation_function = gui._get_user_function(on_creation) if on_creation else None  # type: ignore
                 if callable(on_creation_function) and on_creation:
                     try:
-                        res = gui._call_function_with_state( # type: ignore
+                        res = gui._call_function_with_state(  # type: ignore
                             on_creation_function,
                             [
                                 id,
@@ -499,7 +506,7 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                             state.assign(error_var, f"{res}")
                             return
                     except Exception as e:  # pragma: no cover
-                        if not gui._call_on_exception(on_creation, e): # type: ignore
+                        if not gui._call_on_exception(on_creation, e):  # type: ignore
                             _warn(f"on_creation(): Exception raised in '{on_creation}()'", e)
                         state.assign(
                             error_var,
@@ -525,7 +532,7 @@ class _GuiCoreContext(_CoreEventConsumerBase):
             finally:
                 self.scenario_refresh(scenario_id)
                 if (scenario or user_scenario) and (sel_scenario_var := args[1] if isinstance(args[1], str) else None):
-                    self.gui._update_var( # type: ignore
+                    self.gui._update_var(  # type: ignore
                         sel_scenario_var[6:] if sel_scenario_var.startswith("_TpLv_") else sel_scenario_var,
                         scenario or user_scenario,
                         on_change=args[2],
@@ -569,20 +576,8 @@ class _GuiCoreContext(_CoreEventConsumerBase):
         scenario = t.cast(Scenario, core_get(entity_id))
         if scenario:
             try:
-                if not sequence:
-                    if isinstance(sequence, str) and (name := data.get(_GuiCoreContext.__PROP_ENTITY_NAME)):
-                        scenario.add_sequence(name, t.cast(list, data.get("task_ids")))
-                    else:
-                        primary = data.get(_GuiCoreContext.__PROP_SCENARIO_PRIMARY)
-                        if primary is True:
-                            if not (reason := is_promotable(scenario)):
-                                _GuiCoreContext.__assign_var(
-                                    state, error_var, f"Scenario {entity_id} is not promotable: {_get_reason(reason)}."
-                                )
-                                return
-                            set_primary(scenario)
-                        self.__edit_properties(scenario, data)
-                else:
+                # If a specific sequence name is provided, operate on that sequence (edit/rename/delete)
+                if isinstance(sequence, str):
                     if data.get("del", False):
                         scenario.remove_sequence(sequence)
                     else:
@@ -599,6 +594,21 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                                 f"Sequence {name} is not available in Scenario {entity_id}.",
                             )
                             return
+                else:
+                    # No specific sequence provided: either add a new sequence (when name present)
+                    # or edit scenario-level properties (including setting primary)
+                    if (name := data.get(_GuiCoreContext.__PROP_ENTITY_NAME)) and isinstance(name, str):
+                        scenario.add_sequence(name, t.cast(list, data.get("task_ids")))
+                    else:
+                        primary = data.get(_GuiCoreContext.__PROP_SCENARIO_PRIMARY)
+                        if primary is True:
+                            if not (reason := is_promotable(scenario)):
+                                _GuiCoreContext.__assign_var(
+                                    state, error_var, f"Scenario {entity_id} is not promotable: {_get_reason(reason)}."
+                                )
+                                return
+                            set_primary(scenario)
+                        self.__edit_properties(scenario, data)
 
                 _GuiCoreContext.__assign_var(state, error_var, "")
             except Exception as e:
@@ -630,10 +640,10 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                 submission_entity = core_submit(
                     entity,
                     on_submission=on_submission,
-                    client_id=self.gui._get_client_id(), # type: ignore
-                    module_context=self.gui._get_locals_context(), # type: ignore
+                    client_id=self.gui._get_client_id(),  # type: ignore
+                    module_context=self.gui._get_locals_context(),  # type: ignore
                 )
-                client_status = _ClientStatus(self.gui._get_client_id(), None) # type: ignore
+                client_status = _ClientStatus(self.gui._get_client_id(), None)  # type: ignore
                 with self.submissions_lock:
                     self.client_submission[submission_entity.id] = client_status
                 if Config.core.mode == "development":
@@ -982,9 +992,9 @@ class _GuiCoreContext(_CoreEventConsumerBase):
         if isinstance(entity, DataNode):
             try:
                 if lock:
-                    entity.lock_edit(self.gui._get_client_id()) # type: ignore
+                    entity.lock_edit(self.gui._get_client_id())  # type: ignore
                 else:
-                    entity.unlock_edit(self.gui._get_client_id()) # type: ignore
+                    entity.unlock_edit(self.gui._get_client_id())  # type: ignore
                 _GuiCoreContext.__assign_var(state, error_var, "")
             except Exception as e:
                 _GuiCoreContext.__assign_var(state, error_var, f"Error locking Data node. {e}")
@@ -1090,7 +1100,7 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                     else float(val)
                     if data.get("type") == "float"
                     else data.get("value"),
-                    editor_id=self.gui._get_client_id(), # type: ignore
+                    editor_id=self.gui._get_client_id(),  # type: ignore
                     comment=t.cast(str, data.get(_GuiCoreContext.__PROP_ENTITY_COMMENT)),
                 )
                 _GuiCoreContext.__assign_var(state, error_var, "")
@@ -1178,7 +1188,7 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                 if new_data is not None:
                     datanode.write(
                         new_data,
-                        editor_id=self.gui._get_client_id(), # type: ignore
+                        editor_id=self.gui._get_client_id(),  # type: ignore
                         comment=user_data.get(_GuiCoreContext.__PROP_ENTITY_COMMENT),
                     )
                     _GuiCoreContext.__assign_var(state, error_var, "")
@@ -1203,7 +1213,7 @@ class _GuiCoreContext(_CoreEventConsumerBase):
     def get_data_node_tabular_data(self, id: str):
         self.__lazy_start()
         if id and is_readable(t.cast(DataNodeId, id)) and (dn := core_get(id)) and isinstance(dn, DataNode):
-            if dn.is_ready_for_reading or (dn.edit_in_progress and dn.editor_id == self.gui._get_client_id()): # type: ignore
+            if dn.is_ready_for_reading or (dn.edit_in_progress and dn.editor_id == self.gui._get_client_id()):  # type: ignore
                 try:
                     value = self.__read_tabular_data(dn)
                     if _GuiCoreDatanodeAdapter._is_tabular_data(dn, value):
@@ -1215,11 +1225,11 @@ class _GuiCoreContext(_CoreEventConsumerBase):
     def get_data_node_tabular_columns(self, id: str):
         self.__lazy_start()
         if id and is_readable(t.cast(DataNodeId, id)) and (dn := core_get(id)) and isinstance(dn, DataNode):
-            if dn.is_ready_for_reading or (dn.edit_in_progress and dn.editor_id == self.gui._get_client_id()): # type: ignore
+            if dn.is_ready_for_reading or (dn.edit_in_progress and dn.editor_id == self.gui._get_client_id()):  # type: ignore
                 try:
                     value = self.__read_tabular_data(dn)
                     if _GuiCoreDatanodeAdapter._is_tabular_data(dn, value):
-                        return self.gui._tbl_cols( # type: ignore
+                        return self.gui._tbl_cols(  # type: ignore
                             True, True, "{}", json.dumps({"data": "tabular_data"}), tabular_data=value
                         )
                 except Exception:
@@ -1229,9 +1239,9 @@ class _GuiCoreContext(_CoreEventConsumerBase):
     def get_data_node_chart_config(self, id: str):
         self.__lazy_start()
         if id and is_readable(t.cast(DataNodeId, id)) and (dn := core_get(id)) and isinstance(dn, DataNode):
-            if dn.is_ready_for_reading or (dn.edit_in_progress and dn.editor_id == self.gui._get_client_id()): # type: ignore
+            if dn.is_ready_for_reading or (dn.edit_in_progress and dn.editor_id == self.gui._get_client_id()):  # type: ignore
                 try:
-                    return self.gui._chart_conf( # type: ignore
+                    return self.gui._chart_conf(  # type: ignore
                         True,
                         True,
                         "{}",
@@ -1247,7 +1257,7 @@ class _GuiCoreContext(_CoreEventConsumerBase):
         args = payload.get("args")
         if args is None or not isinstance(args, list) or len(args) < 2:
             return
-        on_action_function = self.gui._get_user_function(args[1]) if args[1] else None # type: ignore
+        on_action_function = self.gui._get_user_function(args[1]) if args[1] else None  # type: ignore
         if callable(on_action_function):
             try:
                 entity = (
@@ -1255,12 +1265,12 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                     if (reason := is_readable(t.cast(ScenarioId, args[0])))
                     else f"{args[0]} is not readable: {_get_reason(reason)}"
                 )
-                self.gui._call_function_with_state( # type: ignore
+                self.gui._call_function_with_state(  # type: ignore
                     on_action_function,
                     [entity],
                 )
             except Exception as e:
-                if not self.gui._call_on_exception(args[1], e): # type: ignore
+                if not self.gui._call_on_exception(args[1], e):  # type: ignore
                     _warn(f"dag.on_action(): Exception raised in '{args[1]}()' with '{args[0]}'", e)
         elif args[1]:
             _warn(f"dag.on_action(): Invalid function '{args[1]}()'.")
@@ -1278,7 +1288,7 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                 if act_payload.get("action") == "export":
                     if reason := dn.is_downloadable():
                         path = dn._get_downloadable_path()
-                        self.gui._download(Path(path), dn_id) # type: ignore
+                        self.gui._download(Path(path), dn_id)  # type: ignore
                     else:
                         state.assign(
                             error_id,
@@ -1287,12 +1297,12 @@ class _GuiCoreContext(_CoreEventConsumerBase):
                         )
                 else:
                     checker_name = act_payload.get("upload_check")
-                    checker = self.gui._get_user_function(checker_name) if checker_name else None # type: ignore
+                    checker = self.gui._get_user_function(checker_name) if checker_name else None  # type: ignore
                     if not (
                         reason := dn._upload(
                             act_payload.get("path", ""),
                             t.cast(t.Callable[[str, t.Any], bool], checker) if callable(checker) else None,
-                            editor_id=self.gui._get_client_id(), # type: ignore
+                            editor_id=self.gui._get_client_id(),  # type: ignore
                             comment=None,
                         )
                     ):
@@ -1304,13 +1314,22 @@ class _GuiCoreContext(_CoreEventConsumerBase):
             state.assign(error_id, reason.reasons)
 
     def _auth_listener(self, state: State, client_id: t.Optional[str], payload: t.Dict[str, t.Any]):
-        self.gui._broadcast( # type: ignore
-            _GuiCoreContext._AUTH_CHANGED_NAME,
+        # Prepare message based on authorization check
+        msg = (
             payload.get("override", "")
             if (reason := can_create())
-            else f"Cannot create scenario: {_get_reason(reason)}",
-            client_id,
+            else f"Cannot create scenario: {_get_reason(reason)}"
         )
+        try:
+            if hasattr(self.gui, "_broadcast"):
+                self.gui._broadcast(  # type: ignore
+                    _GuiCoreContext._AUTH_CHANGED_NAME,
+                    msg,
+                    client_id,
+                )
+        except AttributeError:
+            # If the Gui server isn't available, ignore broadcasting to avoid errors during startup/shutdown
+            pass
 
 
 def _get_reason(reason: t.Union[bool, ReasonCollection]):
