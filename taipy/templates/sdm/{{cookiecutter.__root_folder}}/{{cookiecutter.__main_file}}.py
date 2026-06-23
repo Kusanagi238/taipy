@@ -36,7 +36,6 @@ if __name__ == "__main__":
     # Instantiate, configure and run the Orchestrator
     orchestrator = Orchestrator()
     default_scenario_cfg = configure()
-    orchestrator.run()
 
     # ##################################################################################################################
     # PLACEHOLDER: Initialize your data application here                                                               #
@@ -44,10 +43,16 @@ if __name__ == "__main__":
     # Example:                                                                                                         #
     if len(tp.get_scenarios()) == 0:
         tp.create_scenario(default_scenario_cfg, name="Default Scenario")
+
+    orchestrator.run()
     # Comment, remove or replace the previous lines with your own use case                                             #
     # ##################################################################################################################
 
     # Instantiate, configure and run the GUI
     gui = Gui(pages=pages)
+    # Delay creating the partial until after the GUI server is started
+    data_node_partial = None
+    gui.run(title="Taipy Application", margin="0em")
+
+    # add_partial must be called after the GUI server is running
     data_node_partial = gui.add_partial("")
-    gui.run(title="{{cookiecutter.__application_title}}", margin="0em")

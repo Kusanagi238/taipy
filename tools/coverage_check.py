@@ -44,7 +44,13 @@ def check_changed_files_coverage(coverage_file, changed_files, threshold=80):
         if not isinstance(classes, list):
             classes = [classes]
         for cls in classes:
-            files[cls["@filename"]] = float(cls["@line-rate"]) * 100
+            filename = cls["@filename"]
+            coverage_pct = float(cls["@line-rate"]) * 100
+            # Store both the original filename (as reported in the coverage XML)
+            # and a normalized version without the leading "taipy/" so lookups
+            # succeed regardless of whether changed_files were stripped.
+            files[filename] = coverage_pct
+            files[filename.replace("taipy/", "").lstrip("./")] = coverage_pct
     qty = 0
     sum_coverage = 0
     for file in changed_files:

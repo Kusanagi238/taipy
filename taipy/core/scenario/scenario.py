@@ -748,7 +748,7 @@ class Scenario(_Entity, Submittable, _Labeled):
     def _get_existing_tasks(self) -> Dict[str, Task]:
         return self.__get_tasks(raise_not_existing=False)
 
-    def __get_tasks(self, raise_not_existing: bool = True) -> Dict[str, Task]:
+    def __get_tasks(self, raise_not_existing: bool = False) -> Dict[str, Task]:
         from ..task._task_manager_factory import _TaskManagerFactory
 
         _tasks = {}
@@ -758,13 +758,14 @@ class Scenario(_Entity, Submittable, _Labeled):
             t = task_manager._get(task_or_id, task_or_id)
 
             if not isinstance(t, Task):
-                if raise_not_existing:
-                    raise NonExistingTask(task_or_id)
                 non_existing_tasks.append(task_or_id)
                 continue
             _tasks[t.config_id] = t
         for t_id in non_existing_tasks:
             self._tasks.discard(t_id)  # type: ignore[arg-type]
+        if raise_not_existing and non_existing_tasks:
+            # Raise for the first missing task to preserve previous behavior when explicitly requested
+            raise NonExistingTask(non_existing_tasks[0])
         return _tasks
 
     @staticmethod

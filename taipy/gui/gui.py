@@ -276,6 +276,9 @@ class Gui:
         self._path_mapping = path_mapping
 
         # Server config
+        # Maintain both names for compatibility: internal code expects _server while
+        # some parts of the init flow used _server_instance. Keep them in sync.
+        self._server: t.Any = None
         self._server_instance: t.Any = None
         _additional_supported_server: t.List[t.Type[_Server]] = _Hooks()._get_additional_supported_server() or []
         _supported_server: t.List[t.Type[_Server]] = [
@@ -289,6 +292,8 @@ class Gui:
             if isinstance(server, server_class.server_base_class):  # type: ignore
                 _server_class = server_class
                 self._server_instance = server
+                # keep both attributes consistent so other methods can access either name
+                self._server = server
                 break
         if _server_class is None:
             raise ValueError("Invalid 'server' option")

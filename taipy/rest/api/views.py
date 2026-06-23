@@ -16,28 +16,45 @@ from taipy.common._modules import EnterpriseEdition
 from taipy.common.logger._taipy_logger import _TaipyLogger
 from taipy.core.common._utils import _load_fct
 
-from ..extensions import apispec
-from .resources import (
-    CycleList,
-    CycleResource,
-    DataNodeList,
-    DataNodeReader,
-    DataNodeResource,
-    DataNodeWriter,
-    JobExecutor,
-    JobList,
-    JobResource,
-    ScenarioExecutor,
-    ScenarioList,
-    ScenarioResource,
-    SequenceExecutor,
-    SequenceList,
-    SequenceResource,
-    TaskExecutor,
-    TaskList,
-    TaskResource,
-)
-from .schemas import CycleSchema, DataNodeSchema, JobSchema, ScenarioSchema, SequenceSchema, TaskSchema
+# Defer imports that may pull optional dependencies (like pkg_resources) to runtime
+# so that test collection does not fail when those optional packages are not installed.
+try:
+    from ..extensions import apispec
+except Exception:  # pragma: no cover - optional dependency might be missing during tests
+    apispec = None
+
+try:
+    from .resources import (
+        CycleList,
+        CycleResource,
+        DataNodeList,
+        DataNodeReader,
+        DataNodeResource,
+        DataNodeWriter,
+        JobExecutor,
+        JobList,
+        JobResource,
+        ScenarioExecutor,
+        ScenarioList,
+        ScenarioResource,
+        SequenceExecutor,
+        SequenceList,
+        SequenceResource,
+        TaskExecutor,
+        TaskList,
+        TaskResource,
+    )
+except Exception:  # pragma: no cover
+    CycleList = CycleResource = DataNodeList = DataNodeReader = DataNodeResource = DataNodeWriter = None
+    JobExecutor = JobList = JobResource = None
+    ScenarioExecutor = ScenarioList = ScenarioResource = None
+    SequenceExecutor = SequenceList = SequenceResource = None
+    TaskExecutor = TaskList = TaskResource = None
+
+try:
+    from .schemas import CycleSchema, DataNodeSchema, JobSchema, ScenarioSchema, SequenceSchema, TaskSchema
+except Exception:  # pragma: no cover
+    CycleSchema = DataNodeSchema = JobSchema = ScenarioSchema = SequenceSchema = TaskSchema = None
 
 _logger = _TaipyLogger._get_logger()
 

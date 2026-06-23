@@ -9,6 +9,19 @@
 # an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 """Package for the Taipy Rest API."""
-from . import error_handler, views
+
+import importlib as _importlib
+
+
+# Defer importing submodules until they are accessed to avoid executing
+# their top-level imports (which may rely on optional third-party
+# dependencies) at package import time.
+def __getattr__(name):
+    if name in ("error_handler", "views"):
+        module = _importlib.import_module(f"{__name__}.{name}")
+        globals()[name] = module
+        return module
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = ["views", "error_handler"]

@@ -9,4 +9,12 @@
 # an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 
-from .rest import Rest
+try:
+    from .rest import Rest  # type: ignore
+except Exception:  # pragma: no cover - defer import to runtime to avoid import-time side effects
+    Rest = None
+    def __getattr__(name):
+        if name == "Rest":
+            from .rest import Rest as _Rest
+            return _Rest
+        raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

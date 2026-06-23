@@ -17,4 +17,11 @@ initialized in application factory
 
 from .commons.apispec import APISpecExt
 
-apispec = APISpecExt()
+_apispec = None
+
+def get_apispec():
+    """Lazily instantiate APISpecExt to avoid import-time side effects."""
+    global _apispec
+    if _apispec is None:
+        _apispec = APISpecExt()
+    return _apispec

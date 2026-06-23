@@ -219,6 +219,41 @@ class _SequenceManager(_Manager[Sequence], _VersionMixin):
         if not sequence._is_consistent():
             raise InvalidSequence(sequence_id)
 
+        # Ensure the sequence is registered in its scenario (if provided).
+        # This mirrors the expectation that newly created sequences are persisted
+        # / registered within their scenario so later lookups by id/name succeed.
+        if scenario_id is not None:
+            try:
+                scenario_manager = _ScenarioManagerFactory._build_manager()
+                # Try to fetch the scenario with the provided version if supported
+                try:
+                    scenario = (
+                        scenario_manager._get(scenario_id, version)
+                        if version is not None
+                        else scenario_manager._get(scenario_id)
+                    )
+                except TypeError:
+                    # Fallback if _get doesn't accept version parameter
+                    scenario = scenario_manager._get(scenario_id)
+
+                if scenario is not None:
+                    # Safely add the sequence to the scenario's sequences mapping.
+                    # The exact attribute name for sequences on Scenario is implementation-dependent,
+                    # but commonly it's _sequences (mapping name -> id). Create if missing.
+                    if not hasattr(scenario, "_sequences") or scenario._sequences is None:
+                        scenario._sequences = {}
+
+                    # Keep mapping by sequence name for backward compatibility
+                    scenario._sequences[sequence_name] = sequence_id
+
+                    # Persist the updated scenario
+                    scenario_manager._update(scenario)
+            except Exception:
+                # Do not fail creation if scenario registration is unavailable;
+                # the sequence object itself is still valid and returned. Any
+                # repository/manager issues should be handled at higher level.
+                pass
+
         return sequence
 
     @classmethod

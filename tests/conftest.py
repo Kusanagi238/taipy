@@ -22,8 +22,13 @@ from taipy.common.config._serializer._base_serializer import _BaseSerializer
 from taipy.common.config._serializer._toml_serializer import _TomlSerializer
 from taipy.common.config.checker._checker import _Checker
 from taipy.common.config.checker.issue_collector import IssueCollector
-from taipy.core.config import CoreSection, DataNodeConfig, JobConfig, ScenarioConfig, TaskConfig
-from taipy.rest.config import RestConfig
+
+# Avoid importing optional runtime dependencies during pytest collection.
+# Import heavy/optional taipy modules only for type checking to prevent
+# ModuleNotFoundError during test collection when optional deps are absent.
+if t.TYPE_CHECKING:
+    from taipy.core.config import CoreSection, DataNodeConfig, JobConfig, ScenarioConfig, TaskConfig
+    from taipy.rest.config import RestConfig
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

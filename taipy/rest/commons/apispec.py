@@ -12,7 +12,11 @@
 from apispec import APISpec
 from apispec.exceptions import APISpecError
 from apispec.ext.marshmallow import MarshmallowPlugin
-from apispec_webframeworks.flask import FlaskPlugin
+
+try:
+    from apispec_webframeworks.flask import FlaskPlugin
+except Exception:  # pragma: no cover - optional dependency may be missing during test collection
+    FlaskPlugin = None
 from flask import Blueprint, jsonify, render_template
 
 

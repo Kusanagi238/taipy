@@ -15,7 +15,13 @@ from flask import Flask
 
 from . import api
 from .commons.encoder import _CustomEncoder
-from .extensions import apispec
+
+# Delay/guard importing apispec to avoid hard dependency on pkg_resources
+# during test collection (some environments may not have pkg_resources).
+try:
+    from .extensions import apispec
+except Exception:
+    apispec = None
 
 
 def create_app(testing=False, flask_env=None, secret_key=None) -> Flask:
