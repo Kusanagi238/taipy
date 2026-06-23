@@ -176,9 +176,14 @@ class ExcelDataNode(DataNode, _FileDataNodeMixin, _TabularDataNodeMixin):
             work_books = {}
             sheet_names = excel_file.sheetnames
 
-            user_provided_sheet_names = properties.get(self.__SHEET_NAME_PROPERTY) or []
-            if not isinstance(user_provided_sheet_names, (list, set, tuple)):
-                user_provided_sheet_names = [user_provided_sheet_names]
+            user_provided_sheet_names = properties.get(self.__SHEET_NAME_PROPERTY)
+            if user_provided_sheet_names is None:
+                user_provided_sheet_names = []
+            elif not isinstance(user_provided_sheet_names, list):
+                if isinstance(user_provided_sheet_names, (set, tuple)):
+                    user_provided_sheet_names = list(user_provided_sheet_names)
+                else:
+                    user_provided_sheet_names = [user_provided_sheet_names]
 
             provided_sheet_names = user_provided_sheet_names or sheet_names
 
