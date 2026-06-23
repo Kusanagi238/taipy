@@ -20,8 +20,8 @@ def test_date_md_1(gui: Gui, test_client, helpers):
     expected_list = [
         "<DateSelector",
         'defaultDate="2020-12-',
-        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0"',
-        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0',
+        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
+        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
     ]
     helpers.test_control_md(gui, md_string, expected_list)
 
@@ -32,9 +32,9 @@ def test_date_md_2(gui: Gui, test_client, helpers):
     expected_list = [
         "<DateSelector",
         'defaultDate="2020-12-',
-        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0"',
-        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0',
-        'withTime="{!true',
+        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
+        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
+        'withTime="{!true!}"',
         'label="a label"',
     ]
     helpers.test_control_md(gui, md_string, expected_list)
@@ -45,10 +45,10 @@ def test_date_md_3(gui: Gui, test_client, helpers):
     expected_list = [
         "<DateSelector",
         'defaultDate="2020-12-',
-        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0"',
-        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0',
-        'withTime="{!true',
-        'analogic="{!true',
+        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
+        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
+        'withTime="{!true!}"',
+        'analogic="{!true!}"',
         'label="a label"',
     ]
     helpers.test_control_md(gui, md_string, expected_list)
@@ -59,9 +59,9 @@ def test_date_md_width(gui: Gui, test_client, helpers):
     expected_list = [
         "<DateSelector",
         'defaultDate="2020-12-',
-        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0"',
+        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
         'width="70%"',
-        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0',
+        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
     ]
     helpers.test_control_md(gui, md_string, expected_list)
 
@@ -72,8 +72,8 @@ def test_date_html_1(gui: Gui, test_client, helpers):
     expected_list = [
         "<DateSelector",
         'defaultDate="2020-12-',
-        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0"',
-        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0',
+        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
+        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
     ]
     helpers.test_control_html(gui, html_string, expected_list)
 
@@ -84,7 +84,7 @@ def test_date_html_2(gui: Gui, test_client, helpers):
     expected_list = [
         "<DateSelector",
         'defaultDate="2020-12-',
-        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0"',
-        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0',
+        'updateVarName="_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
+        'date="{!_TpDt_tpec_TpExPr_date_TPMDL_0!}"',
     ]
     helpers.test_control_html(gui, html_string, expected_list)

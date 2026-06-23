@@ -23,7 +23,13 @@ from taipy.common.config._serializer._toml_serializer import _TomlSerializer
 from taipy.common.config.checker._checker import _Checker
 from taipy.common.config.checker.issue_collector import IssueCollector
 from taipy.core.config import CoreSection, DataNodeConfig, JobConfig, ScenarioConfig, TaskConfig
-from taipy.rest.config import RestConfig
+
+# Import taipy.rest.config lazily to avoid importing optional heavy dependencies (like apispec_webframeworks)
+# during pytest collection which may not be available in all CI environments.
+try:
+    from taipy.rest.config import RestConfig
+except Exception:
+    RestConfig = None
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

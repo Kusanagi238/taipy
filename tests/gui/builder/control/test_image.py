@@ -13,6 +13,23 @@ import os
 import pathlib
 from importlib import util
 
+# Ensure pkg_resources is available; try importlib_metadata backport or provide a minimal shim
+try:
+    import pkg_resources  # type: ignore
+except Exception:
+    try:
+        import importlib_metadata as pkg_resources  # type: ignore
+    except Exception:
+        try:
+            import importlib.metadata as _im  # type: ignore
+            import types
+
+            pkg_resources = types.SimpleNamespace(get_distribution=getattr(_im, "version", lambda name: None))
+        except Exception:
+            import types
+
+            pkg_resources = types.SimpleNamespace(get_distribution=lambda name: None)
+
 import taipy.gui.builder as tgb
 from taipy.gui import Gui
 
@@ -36,10 +53,16 @@ def test_image_file_builder(gui: Gui, test_client, helpers):
             tgb.image(content="{content}")  # type: ignore[attr-defined]
         expected_list = [
             "<Image",
+            '"content="{!',
             'defaultContent="data:image/png;base64,',
         ]
         if not util.find_spec("magic"):
-            expected_list = ["<Image", 'defaultContent="/taipy-content/taipyStatic0/TaiPyContent.', ".bin"]
+            expected_list = [
+                "<Image",
+                '"content="{!',
+                'defaultContent="/taipy-content/taipyStatic0/TaiPyContent.',
+                ".bin",
+            ]
         helpers.test_control_builder(gui, page, expected_list)
 
 
@@ -51,6 +74,7 @@ def test_image_path_builder(gui: Gui, test_client, helpers):
         tgb.image(content="{content}")  # type: ignore[attr-defined]
     expected_list = [
         "<Image",
+        '"content="{!',
         'defaultContent="/taipy-content/taipyStatic0/fred.png',
     ]
     helpers.test_control_builder(gui, page, expected_list)
@@ -63,8 +87,14 @@ def test_image_bad_file_builder(gui: Gui, test_client, helpers):
             tgb.image(content="{content}")  # type: ignore[attr-defined]
         expected_list = [
             "<Image",
+            '"content="{!',
             'defaultContent="Invalid content: text/x',
         ]
         if not util.find_spec("magic"):
-            expected_list = ["<Image", 'defaultContent="/taipy-content/taipyStatic0/TaiPyContent.', ".bin"]
+            expected_list = [
+                "<Image",
+                '"content="{!',
+                'defaultContent="/taipy-content/taipyStatic0/TaiPyContent.',
+                ".bin",
+            ]
         helpers.test_control_builder(gui, page, expected_list)

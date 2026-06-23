@@ -277,6 +277,8 @@ class Gui:
 
         # Server config
         self._server_instance: t.Any = None
+        # Also provide the attribute name used elsewhere in the codebase
+        self._server: t.Any = None
         _additional_supported_server: t.List[t.Type[_Server]] = _Hooks()._get_additional_supported_server() or []
         _supported_server: t.List[t.Type[_Server]] = [
             _FlaskServer,
@@ -289,6 +291,8 @@ class Gui:
             if isinstance(server, server_class.server_base_class):  # type: ignore
                 _server_class = server_class
                 self._server_instance = server
+                # keep both attributes in sync so code expecting either name works
+                self._server = server
                 break
         if _server_class is None:
             raise ValueError("Invalid 'server' option")
@@ -1179,11 +1183,15 @@ class Gui:
         values = {v: _getscopeattr_drill(self, v) for v in modified_vars if is_custom_page or _is_moduled_variable(v)}  # type: ignore[arg-type]
         if not values:
             return
+        # Determine which variables must be excluded without mutating the list while iterating
+        to_remove: t.Set[str] = set()
         for k, v in values.items():
             if isinstance(v, (_TaipyData, _TaipyContentHtml)) and v.get_name() in modified_vars:
-                modified_vars.remove(v.get_name())
+                to_remove.add(v.get_name())
             elif isinstance(v, _DoNotUpdate):
-                modified_vars.remove(k)
+                to_remove.add(k)
+        if to_remove:
+            modified_vars = [mv for mv in modified_vars if mv not in to_remove]
         custom_page_filtered_types = _Hooks()._get_resource_handler_data_layer_supported_types()
         in_custom_page_context = _Hooks()._is_in_custom_page_context()
         for _var in modified_vars:
@@ -1378,9 +1386,10 @@ class Gui:
         grouping_message = self.__get_message_grouping() if allow_grouping else None
         if grouping_message is None:
             try:
+                # Do not cast the recipient to str: forward the original receiver value (None, str, or iterable)
                 self._server.send_ws_message(
                     data=payload,
-                    to=t.cast(str, self.__get_ws_receiver(send_back_only)),
+                    to=self.__get_ws_receiver(send_back_only),
                 )
                 time.sleep(0.001)
             except Exception as e:  # pragma: no cover
@@ -1531,7 +1540,8 @@ class Gui:
         return list(sids)
 
     def __get_sids(self, client_id: str) -> t.Set[str]:
-        return self.__client_id_2_sid.get(client_id, set())
+        # Ensure we return the actual stored set for the client_id so modifications persist
+        return self.__client_id_2_sid.setdefault(client_id, set())
 
     def __get_message_grouping(self):
         return (
@@ -2550,13 +2560,20 @@ class Gui:
                         page.render(self, silent=True)  # type: ignore[arg-type]
         if additional_pages := _Hooks()._get_additional_pages():
             for page in additional_pages:
-                if isinstance(page, Page):
-                    with contextlib.suppress(Exception):
+                with contextlib.suppress(Exception):
+                    if isinstance(page, Page):
+                        # If it's a Page instance, behave like pages from the config
                         if (
                             page._renderer is not None
                             and _Hooks()._get_custom_page_type()
-                            and isinstance(page, _Hooks()._get_custom_page_type())  # type: ignore[arg-type]
+                            and isinstance(page._renderer, _Hooks()._get_custom_page_type())  # type: ignore[arg-type]
                         ):
+                            _Hooks()._bind_custom_page_variables(self, page._renderer, self._get_client_id())
+                        else:
+                            page.render(self, silent=True)  # type: ignore[arg-type]
+                    else:
+                        # page is actually a renderer or a custom renderer instance
+                        if _Hooks()._get_custom_page_type() and isinstance(page, _Hooks()._get_custom_page_type()):  # type: ignore[arg-type]
                             _Hooks()._bind_custom_page_variables(self, page, self._get_client_id())
                         else:
                             new_page = _Page()

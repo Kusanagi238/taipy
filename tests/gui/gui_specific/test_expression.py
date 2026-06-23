@@ -102,7 +102,7 @@ def test_expression_table_control(gui: Gui, test_client, helpers):
         "<Table",
         'defaultColumns="{&quot;Letters&quot;: &#x7B;&quot;type&quot;: &quot;object&quot;, &quot;index&quot;: 0, &quot;dfid&quot;: &quot;Letters&quot;&#x7D;, &quot;Numbers&quot;: &#x7B;&quot;type&quot;: &quot;int&quot;, &quot;index&quot;: 1, &quot;dfid&quot;: &quot;Numbers&quot;&#x7D;}"',  # noqa: E501
         'updateVarName="_TpD_tp_TpExPr_pd_concat_series_1_series_2_axis_1_TPMDL_0_0"',
-        'data="{!_TpD_tp_TpExPr_pd_concat_series_1_series_2_axis_1_TPMDL_0_0',
+        'data="{!_TpD_tp_TpExPr_pd_concat_series_1_series_2_axis_1_TPMDL_0_0!}\"',
     ]
     helpers.test_control_md(gui, md_string, expected_list)
     assert isinstance(gui._get_data_scope().tp_TpExPr_pd_concat_series_1_series_2_axis_1_TPMDL_0_0, pd.DataFrame)
@@ -124,8 +124,8 @@ def test_lambda_expression_selector(gui: Gui, test_client, helpers):
         'defaultLov="[[&quot;1&quot;, &quot;scenario 1&quot;], [&quot;3&quot;, &quot;scenario 3&quot;], [&quot;2&quot;, &quot;scenario 2&quot;]]"',  # noqa: E501
         'defaultValue="[&quot;1&quot;]"',
         'updateVars="lov=_TpL_tp_TpExPr_gui_get_adapted_lov_lov_test_TPMDL_0_0"',
-        'lov="{!_TpL_tp_TpExPr_gui_get_adapted_lov_lov_test_TPMDL_0_0',
+        'lov="{!_TpL_tp_TpExPr_gui_get_adapted_lov_lov_test_TPMDL_0_0!}\"',
         'updateVarName="_TpLv_tpec_TpExPr_sel_TPMDL_0"',
-        'value="{!_TpLv_tpec_TpExPr_sel_TPMDL_0',
+        'value="{!_TpLv_tpec_TpExPr_sel_TPMDL_0!}\"',
     ]
     helpers.test_control_md(gui, md_string, expected_list)

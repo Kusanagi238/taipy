@@ -30,9 +30,9 @@ def test_table_builder_1(gui: Gui, helpers, csvdata):
         'height="80vh"',
         'width="100%"',
         'pageSizeOptions="[10, 30, 100]"',
-        'pageSize="{!10.0',
+        'pageSize="{!10.0!}"',
         'updateVarName="_TpD_tpec_TpExPr_csvdata_TPMDL_0"',
-        'data="{!_TpD_tpec_TpExPr_csvdata_TPMDL_0',
+        'data="{!_TpD_tpec_TpExPr_csvdata_TPMDL_0!}"',
     ]
     gui._set_frame(inspect.currentframe())
     helpers.test_control_builder(gui, page, expected_list)
@@ -44,8 +44,8 @@ def test_table_reset_builder(gui: Gui, helpers, csvdata):
             data="{csvdata}",
             rebuild=True,
             page_size=10,
-            page_size_options="10;30;100",
-            columns="Day;Entity;Code;Daily hospital occupancy",
+            page_size_options=[10, 30, 100],
+            columns=["Day", "Entity", "Code", "Daily hospital occupancy"],
             date_format="eee dd MMM yyyy",
         )
     expected_list = [
@@ -54,9 +54,9 @@ def test_table_reset_builder(gui: Gui, helpers, csvdata):
         'height="80vh"',
         'width="100%"',
         'pageSizeOptions="[10, 30, 100]"',
-        'pageSize="{!10.0',
+        'pageSize="{!10.0!}"',
         'updateVarName="_TpD_tpec_TpExPr_csvdata_TPMDL_0"',
-        'data="{!_TpD_tpec_TpExPr_csvdata_TPMDL_0',
+        'data="{!_TpD_tpec_TpExPr_csvdata_TPMDL_0!}"',
         'columns="{!tp_TpExPr_gui_tbl_cols_True_None_7B_22columns_22_3A_20_22Day_3BEntity_3BCode_3BDaily_20hospital_20occupancy_22_2C_20_22date_format_22_3A_20_22eee_20dd_20MMM_20yyyy_22_7D_7B_22data_22_3A_20_22tpec_TpExPr_csvdata_TPMDL_0_22_7D_tpec_TpExPr_csvdata_TPMDL_0_csvdata_TPMDL_0_0',
     ]
     gui._set_frame(inspect.currentframe())
@@ -80,12 +80,12 @@ def test_table_builder_2(gui: Gui, helpers, csvdata):
         "height": "60vh",
     }
     with tgb.Page(frame=None) as page:
-        tgb.table(data="{csvdata}", properties="table_properties", auto_loading=True, editable=True)  # type: ignore[attr-defined]
+        tgb.table(data="{csvdata}", properties=table_properties, auto_loading=True, editable=True)  # type: ignore[attr-defined]
     expected_list = [
         "<Table",
-        'allowAllRows="{!true',
-        'autoLoading="{!true',
-        'editable="{!true',
+        'allowAllRows="{!true!}"',
+        'autoLoading="{!true!}"',
+        'editable="{!true!}"',
         'onEdit="__gui.table_on_edit',
         'onDelete="__gui.table_on_delete',
         'onAdd="__gui.table_on_add',
@@ -93,9 +93,9 @@ def test_table_builder_2(gui: Gui, helpers, csvdata):
         'height="60vh"',
         'width="60vw"',
         'pageSizeOptions="[10, 50, 100, 500]"',
-        'pageSize="{!10',
+        'pageSize="{!10!}"',
         'updateVarName="_TpD_tpec_TpExPr_csvdata_TPMDL_0"',
-        'data="{!_TpD_tpec_TpExPr_csvdata_TPMDL_0',
+        'data="{!_TpD_tpec_TpExPr_csvdata_TPMDL_0!}"',
     ]
     gui._set_frame(inspect.currentframe())
     helpers.test_control_builder(gui, page, expected_list)
