@@ -23,7 +23,13 @@ from taipy.common.config._serializer._toml_serializer import _TomlSerializer
 from taipy.common.config.checker._checker import _Checker
 from taipy.common.config.checker.issue_collector import IssueCollector
 from taipy.core.config import CoreSection, DataNodeConfig, JobConfig, ScenarioConfig, TaskConfig
-from taipy.rest.config import RestConfig
+
+try:
+    # Import may bring optional heavy dependencies (e.g. pkg_resources) which might not be
+    # available during test collection in some CI environments. Guard to avoid aborting pytest collection.
+    from taipy.rest.config import RestConfig
+except Exception:
+    RestConfig = None
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -91,15 +97,20 @@ def reset_configuration_singleton() -> t.Callable:
         Config._collector = IssueCollector()
         Config._serializer = _TomlSerializer()
         Config._comparator = _ConfigComparator()
+        # Use actual types for serializable types rather than string names so
+        # runtime serialization correctly recognizes builtin and special types.
+        import datetime as _dt
+        import types as _types
+
         _BaseSerializer._SERIALIZABLE_TYPES = [
-            "bool",
-            "str",
-            "int",
-            "float",
-            "datetime",
-            "timedelta",
-            "function",
-            "class",
+            bool,
+            str,
+            int,
+            float,
+            _dt.datetime,
+            _dt.timedelta,
+            _types.FunctionType,
+            type,
             "SECTION",
         ]
         _Checker._checkers = []

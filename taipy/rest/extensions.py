@@ -17,4 +17,30 @@ initialized in application factory
 
 from .commons.apispec import APISpecExt
 
-apispec = APISpecExt()
+
+class _LazyAPISpec:
+    """Lazy wrapper to delay APISpecExt instantiation until first use.
+
+    This avoids creating the APISpecExt at module import time which can
+    pull in transitive dependencies during pytest collection.
+    """
+    def __init__(self):
+        super().__setattr__("_obj", None)
+
+    def _ensure(self):
+        if self._obj is None:
+            super().__setattr__("_obj", APISpecExt())
+
+    def __getattr__(self, name):
+        self._ensure()
+        return getattr(self._obj, name)
+
+    def __setattr__(self, name, value):
+        if name == "_obj":
+            super().__setattr__(name, value)
+        else:
+            self._ensure()
+            setattr(self._obj, name, value)
+
+
+apispec = _LazyAPISpec()

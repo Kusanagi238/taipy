@@ -38,7 +38,7 @@ class _Element(ABC):
     __RE_INDEXED_PROPERTY = re.compile(r"^(.*?)__([\w\d]+)$")
     _TAIPY_EMBEDDED_PREFIX = "_tp_embedded_"
     _EMBEDDED_PROPERTIES = ["decimator"]
-    _PROPERTY_TYPES: t.Dict[str, str] = {}
+    _PROPERTY_TYPES: t.Dict[str, t.Any] = {}
     _CALLABLES: t.Optional[t.Set[str]] = None
     __LAMBDA_VALUE_IDX = 0
 
@@ -96,11 +96,23 @@ class _Element(ABC):
 
     def _is_callable(self, name: str):
         if self._CALLABLES is None:
-            self._CALLABLES = {
-                f"{parts[0]}{'' if len(parts)==1 else '__'}"
-                for prop, prop_type in self._PROPERTY_TYPES.items()
-                if (parts := prop.split("[")) and "callable" in prop_type.lower()
-            }
+            callables: t.Set[str] = set()
+            for prop, prop_type in self._PROPERTY_TYPES.items():
+                parts = prop.split("[")
+                # Normalize prop_type to a string for reliable checks (handles enums and objects)
+                if hasattr(prop_type, "value"):
+                    ptype = prop_type.value
+                elif hasattr(prop_type, "name"):
+                    ptype = prop_type.name
+                else:
+                    ptype = prop_type
+                try:
+                    ptype_lower = str(ptype).lower()
+                except Exception:
+                    ptype_lower = ""
+                if "callable" in ptype_lower:
+                    callables.add(f"{parts[0]}{'' if len(parts)==1 else '__'}")
+            self._CALLABLES = callables
         return (parts[0] if len(parts := name.split("__")) == 1 else f"{parts[0]}__") in self._CALLABLES
 
     def _parse_property(self, key: str, value: t.Any) -> t.Any:

@@ -67,7 +67,12 @@ class _TaipyJsonAdapter(object, metaclass=_Singleton):
     def parse(self, o):
         try:
             for adapter in reversed(self._adapters):
-                if (output := adapter.parse(o)) is not None:
+                output = adapter.parse(o)
+                # If an adapter explicitly handled the object and returned None (e.g. _DoNotUpdate),
+                # consider it handled and return None as the JSON value.
+                if output is None and isinstance(o, _DoNotUpdate):
+                    return None
+                if output is not None:
                     return output
             raise TypeError(f"Object of type {type(o).__name__} is not JSON serializable (value: {o}).")
         except Exception as e:

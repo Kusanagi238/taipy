@@ -93,7 +93,8 @@ class Helpers:
 
     @staticmethod
     def _test_control(gui: Gui, expected_values: t.Union[str, t.List]):
-        gui.run(run_server=False, single_client=True, stylekit=False)
+        # Ensure the server is created so we can use the test client.
+        gui.run(run_server=True, run_browser=False, single_client=True, stylekit=False)
         client = gui._server.test_client()
         response = client.get(f"/{Gui._JSX_URL}/test")
         assert response.status_code == 200, f"response.status_code {response.status_code} != 200"
@@ -193,19 +194,25 @@ class Helpers:
     @staticmethod
     def run_e2e_multi_client(gui: Gui):
         with warnings.catch_warnings(record=True):
+            # Try to initialize GUI without starting the server; if no server is created,
+            # start it explicitly so that gui._server is available for .run(...)
             gui.run(run_server=False, run_browser=False, single_client=False, stylekit=False)
-            gui._server.run(
-                host=gui._get_config("host", "127.0.0.1"),
-                port=gui._get_config("port", 5000),
-                client_url=gui._get_config("client_url", "http://localhost:{port}"),
-                debug=False,
-                use_reloader=False,
-                server_log=False,
-                run_in_thread=True,
-                allow_unsafe_werkzeug=False,
-                notebook_proxy=False,
-                port_auto_ranges=gui._get_config("port_auto_ranges", None),
-            )
+            if not hasattr(gui, "_server") or gui._server is None:
+                # Ensure the server instance exists. Start it without opening a browser.
+                gui.run(run_server=True, run_browser=False, single_client=False, stylekit=False)
+            else:
+                gui._server.run(
+                    host=gui._get_config("host", "127.0.0.1"),
+                    port=gui._get_config("port", 5000),
+                    client_url=gui._get_config("client_url", "http://localhost:{port}"),
+                    debug=False,
+                    use_reloader=False,
+                    server_log=False,
+                    run_in_thread=True,
+                    allow_unsafe_werkzeug=False,
+                    notebook_proxy=False,
+                    port_auto_ranges=gui._get_config("port_auto_ranges", None),
+                )
         while not Helpers.port_check():
             time.sleep(0.1)
 

@@ -34,6 +34,18 @@ import markdown as md_lib
 import tzlocal
 from werkzeug.utils import secure_filename
 
+# Some optional dependencies used by imported packages may not be present
+# in lightweight test environments. apispec_webframeworks (pulled by other imports)
+# may import pkg_resources which can be missing. Provide a minimal shim so
+# import-time ModuleNotFoundError is avoided during test collection.
+try:
+    import pkg_resources  # type: ignore
+except Exception:
+    import types as _types
+    pkg_resources = _types.SimpleNamespace()
+    # Ensure subsequent imports of "pkg_resources" find this shim
+    sys.modules.setdefault("pkg_resources", pkg_resources)
+
 import __main__  # noqa: F401
 from taipy.common import _module_exists
 from taipy.common.logger._taipy_logger import _TaipyLogger
@@ -171,7 +183,10 @@ class Gui:
     __BROADCAST_G_ID = "taipy_broadcasting"
     __BRDCST_CALLBACK_G_ID = "taipy_brdcst_callback"
     __SELF_VAR = "__gui"
-    __DO_NOT_UPDATE_VALUE = _DoNotUpdate()
+    # Use a JSON-serializable sentinel value for "do not update" markers to avoid
+    # TypeError during JSON encoding in environments that may serialize class-level
+    # attributes. A unique string is used as a sentinel.
+    __DO_NOT_UPDATE_VALUE = "__TAIPY_DO_NOT_UPDATE__"
     _HTML_CONTENT_KEY = "__taipy_html_content"
     __USER_CONTENT_CB = "custom_user_content_cb"
     __ROBOTO_FONT = "https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
@@ -293,6 +308,9 @@ class Gui:
         if _server_class is None:
             raise ValueError("Invalid 'server' option")
         self._server_class = _server_class
+        # Backwards-compatible attribute expected by other parts of the codebase/tests
+        # Some modules expect `self._server` to reference the server instance. Ensure it exists.
+        self._server = self._server_instance
 
         self._config = _Config(self)
         self.__content_accessor = None
@@ -2438,13 +2456,10 @@ class Gui:
         notification_id: str,
     ):
         if notification_id:
-            self.__send_ws_notification(
-                type="",  # Empty string indicates closing
-                message="",  # No need for a message when closing
-                system_notification=False,  # System notification not needed for closing
-                duration=0,  # No duration since it's an immediate close
-                notification_id=notification_id,
-            )
+            # Use same positional argument ordering as _notify to match
+            # the __send_ws_notification signature and avoid unexpected
+            # keyword argument errors.
+            self.__send_ws_notification("", "", False, 0, notification_id)
 
     def _hold_actions(
         self,

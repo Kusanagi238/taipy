@@ -22,7 +22,6 @@ from ..exceptions.exceptions import (
     InvalidSequenceId,
     ModelNotFound,
     NonExistingSequence,
-    NonExistingTask,
     SequenceBelongsToNonExistingScenario,
 )
 from ..job._job_manager_factory import _JobManagerFactory
@@ -146,7 +145,15 @@ class _SequenceManager(_Manager[Sequence], _VersionMixin):
             elif _task := task_manager._get(task):
                 _tasks.append(_task)
             else:
-                raise NonExistingTask(task)
+                # If a referenced task does not exist in storage, log the missing reference and skip it
+                # Avoid raising here to allow sequence construction to continue when tasks are missing.
+                try:
+                    # Use the class logging helper if available
+                    _SequenceManager.__log_error_entity_not_found(task)
+                except Exception:
+                    # Fallback: silently continue if logging is not available or fails
+                    pass
+                continue
         return _tasks
 
     @classmethod

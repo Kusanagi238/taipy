@@ -16,13 +16,45 @@ if find_spec("taipy"):
         from taipy.common.config._init import *
 
     if find_spec("taipy.gui"):
-        from taipy.gui._init import *
+        import importlib
+        _taipy_lazy_modules = globals().setdefault("_taipy_lazy_modules", {})
+        _taipy_lazy_modules["taipy.gui._init"] = None
+        if "__getattr__" not in globals():
+            def __getattr__(name):
+                import importlib as _importlib
+                for _mod_name in tuple(globals().get("_taipy_lazy_modules", {})):
+                    _cached = globals()["_taipy_lazy_modules"].get(_mod_name)
+                    if _cached is None:
+                        try:
+                            _cached = _importlib.import_module(_mod_name)
+                        except Exception:
+                            continue
+                        globals()["_taipy_lazy_modules"][_mod_name] = _cached
+                    if hasattr(_cached, name):
+                        return getattr(_cached, name)
+                raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
     if find_spec("taipy.core"):
         from taipy.core._init import *
 
     if find_spec("taipy.rest"):
-        from taipy.rest._init import *
+        import importlib
+        _taipy_lazy_modules = globals().setdefault("_taipy_lazy_modules", {})
+        _taipy_lazy_modules["taipy.rest._init"] = None
+        if "__getattr__" not in globals():
+            def __getattr__(name):
+                import importlib as _importlib
+                for _mod_name in tuple(globals().get("_taipy_lazy_modules", {})):
+                    _cached = globals()["_taipy_lazy_modules"].get(_mod_name)
+                    if _cached is None:
+                        try:
+                            _cached = _importlib.import_module(_mod_name)
+                        except Exception:
+                            continue
+                        globals()["_taipy_lazy_modules"][_mod_name] = _cached
+                    if hasattr(_cached, name):
+                        return getattr(_cached, name)
+                raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
     if find_spec("taipy.gui_core"):
         from taipy.gui_core._init import *
