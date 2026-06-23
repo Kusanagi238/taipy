@@ -9,11 +9,29 @@
 # an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 
-from apispec import APISpec
-from apispec.exceptions import APISpecError
-from apispec.ext.marshmallow import MarshmallowPlugin
-from apispec_webframeworks.flask import FlaskPlugin
-from flask import Blueprint, jsonify, render_template
+try:
+    from apispec import APISpec
+    from apispec.exceptions import APISpecError
+    from apispec.ext.marshmallow import MarshmallowPlugin
+except Exception:
+    # apispec (and its dependencies like pkg_resources) may not be available in all environments
+    APISpec = None
+    APISpecError = Exception
+    MarshmallowPlugin = None
+
+try:
+    from apispec_webframeworks.flask import FlaskPlugin
+except Exception:
+    # Optional webframework integration; keep None if not installable
+    FlaskPlugin = None
+
+try:
+    from flask import Blueprint, jsonify, render_template
+except Exception:
+    # Flask may not be present in some test environments
+    Blueprint = None
+    jsonify = None
+    render_template = None
 
 
 class FlaskRestfulPlugin(FlaskPlugin):

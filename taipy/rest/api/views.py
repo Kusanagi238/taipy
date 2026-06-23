@@ -16,7 +16,14 @@ from taipy.common._modules import EnterpriseEdition
 from taipy.common.logger._taipy_logger import _TaipyLogger
 from taipy.core.common._utils import _load_fct
 
-from ..extensions import apispec
+# Import apispec lazily / safely to avoid hard dependency during test collection
+try:
+    from ..extensions import apispec
+except Exception:
+    # If apispec or its heavy dependencies are not available (e.g. pkg_resources),
+    # set apispec to None so the module can be imported without failing.
+    apispec = None
+
 from .resources import (
     CycleList,
     CycleResource,

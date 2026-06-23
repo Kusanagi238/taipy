@@ -13,9 +13,20 @@ import os
 
 from flask import Flask
 
-from . import api
+# Defer importing modules that pull in optional third-party dependencies
+# (e.g. apispec_webframeworks -> pkg_resources) so test collection doesn't
+# fail in environments where those extras are not installed.
+try:
+    from . import api
+except ImportError:
+    api = None
+
 from .commons.encoder import _CustomEncoder
-from .extensions import apispec
+
+try:
+    from .extensions import apispec
+except ImportError:
+    apispec = None
 
 
 def create_app(testing=False, flask_env=None, secret_key=None) -> Flask:

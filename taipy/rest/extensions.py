@@ -15,6 +15,29 @@ All extensions here are used as singletons and
 initialized in application factory
 """
 
-from .commons.apispec import APISpecExt
+# Lazy import to avoid hard dependency at module import time (may be missing in some environments)
+_APISpecExt = None
 
-apispec = APISpecExt()
+def _get_APISpecExt():
+    """Return the APISpecExt class, importing it lazily and tolerating import failures."""
+    global _APISpecExt
+    if _APISpecExt is None:
+        try:
+            from .commons.apispec import APISpecExt as _ImportedAPISpecExt
+        except Exception:
+            # If import fails (e.g., missing optional runtime dependency), keep as None
+            _ImportedAPISpecExt = None
+        _APISpecExt = _ImportedAPISpecExt
+    return _APISpecExt
+
+apispec = None
+
+def get_apispec():
+    """Lazily instantiate and return the apispec extension. Returns None if unavailable."""
+    global apispec
+    if apispec is None:
+        APISpecExt = _get_APISpecExt()
+        if APISpecExt is None:
+            return None
+        apispec = APISpecExt()
+    return apispec
