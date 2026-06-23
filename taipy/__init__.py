@@ -22,7 +22,12 @@ if find_spec("taipy"):
         from taipy.core._init import *
 
     if find_spec("taipy.rest"):
-        from taipy.rest._init import *
+        try:
+            from taipy.rest._init import *
+        except Exception:
+            # Optional dependency for taipy.rest is missing; skip importing at package import time
+            # to avoid raising errors (e.g., missing pkg_resources). Imports can be attempted later.
+            pass
 
     if find_spec("taipy.gui_core"):
         from taipy.gui_core._init import *

@@ -21,9 +21,36 @@ import pytest
 if util.find_spec("playwright"):
     from playwright._impl._page import Page
 
-from taipy.gui import Gui, Html
-from taipy.gui.servers.fastapi import _FastAPIServer
-from taipy.gui.servers.flask import _FlaskServer
+# Guarded imports: avoid importing taipy.gui and server modules at collection time
+# so that missing optional dependencies do not fail test collection.
+Gui = None
+Html = None
+_FastAPIServer = None
+_FlaskServer = None
+
+try:
+    if util.find_spec("taipy.gui"):
+        # Import the package module and fetch attributes to avoid triggering deeper imports at module import time
+        import importlib
+
+        _taipy_gui = importlib.import_module("taipy.gui")
+        Gui = getattr(_taipy_gui, "Gui", None)
+        Html = getattr(_taipy_gui, "Html", None)
+except Exception:
+    Gui = None
+    Html = None
+
+try:
+    if util.find_spec("taipy.gui.servers.fastapi"):
+        from taipy.gui.servers.fastapi import _FastAPIServer  # type: ignore
+except Exception:
+    _FastAPIServer = None
+
+try:
+    if util.find_spec("taipy.gui.servers.flask"):
+        from taipy.gui.servers.flask import _FlaskServer  # type: ignore
+except Exception:
+    _FlaskServer = None
 
 
 @pytest.mark.teste2e

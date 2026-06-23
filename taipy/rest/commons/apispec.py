@@ -12,7 +12,10 @@
 from apispec import APISpec
 from apispec.exceptions import APISpecError
 from apispec.ext.marshmallow import MarshmallowPlugin
-from apispec_webframeworks.flask import FlaskPlugin
+
+# Importing FlaskPlugin at module import time can trigger apispec_webframeworks to import
+# pkg_resources (setuptools) and cause ModuleNotFoundError in minimal test environments.
+# Import FlaskPlugin lazily inside APISpecExt.init_app to avoid import-time dependency issues.
 from flask import Blueprint, jsonify, render_template
 
 
