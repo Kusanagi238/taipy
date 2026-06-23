@@ -76,8 +76,8 @@ class Page:
         # Special variables only use for page reloading in notebook context
         self._notebook_gui: t.Optional["Gui"] = None
         self._notebook_page: t.Optional["_Page"] = None
-        self.set_style(kwargs.get("style", None))
-        self._script_paths(kwargs.get("script_paths", None))
+        self.set_style(t.cast(t.Optional[t.Dict[str, t.Dict[str, t.Any]]], kwargs.get("style", None)))
+        self._script_paths(t.cast(t.Optional[t.Union[str, t.List[str]]], kwargs.get("script_paths", None)))
 
     def create_page(self) -> t.Union[Page, str, None]:
         """Create the page content for page modules.
